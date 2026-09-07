@@ -87,7 +87,21 @@ document.addEventListener('contextmenu', function (e) {
 }, false);
 
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN2aGJxdmNhYmJ6cnh2bmR4dGptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMTA0MjksImV4cCI6MjA5MDc4NjQyOX0.lYIsM5zN4uGKbP79avcKR_EaAlP5tu2N688OgZI6wZA';
-const _db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* supabase.min.js is served from this folder rather than a CDN, so a blocked
+   or slow CDN can no longer stop the app loading. If the file is missing from
+   the library anyway, fall back to a stub instead of throwing here: a
+   ReferenceError on this line would abort the whole script and leave the user
+   a blank screen. The stub returns the same { data, error } shape the call
+   sites already handle, so the normal error toast is shown instead. */
+const _db = (typeof supabase !== 'undefined' && supabase && typeof supabase.createClient === 'function')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : (function () {
+      console.error('[GeoAtt] supabase.min.js failed to load — check that it sits next to app.js in /Style Library/Geo-tagg/');
+      function fail() {
+        return Promise.resolve({ data: null, error: { message: 'Supabase library not loaded' } });
+      }
+      return { from: function () { return { insert: fail }; }, rpc: fail };
+    })();
 
 /* ── STATE ───────────────────────────────────────────────────
    Prasidha: U is the single source of truth.

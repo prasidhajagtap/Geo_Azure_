@@ -17,12 +17,13 @@ A mobile-first, single-origin web attendance app embedded in SharePoint. Employe
 
 ```
 Style Library/Geo-tagg/
-├── index.html      → Shell HTML (62 KB) — markup + SharePoint postback disabler
-├── styles.css      → All CSS (121 KB) — scoped under .smx-wrap to isolate from SP host
-└── app.js          → All JS (120 KB)  — state, i18n, Supabase client, validators, render
+├── index.html        → Shell HTML (62 KB) — markup + SharePoint postback disabler
+├── styles.css        → All CSS (121 KB) — app rules scoped so they cannot leak into the SP host page
+├── app.js            → All JS (120 KB)  — state, i18n, Supabase client, validators, render
+└── supabase.min.js   → Vendored @supabase/supabase-js v2.115.0 UMD (209 KB) — not a CDN
 ```
 
-**Deploy all three files** to `/Style Library/Geo-tagg/` in SharePoint.  
+**Deploy all four files** to `/Style Library/Geo-tagg/` in SharePoint.  
 CSS/JS referenced with absolute paths so they resolve in both preview and production.
 
 > **Do not edit** the old monolithic `C:\TextApp\Attendance\index.html` — it is a pre-split backup.
@@ -38,7 +39,7 @@ CSS/JS referenced with absolute paths so they resolve in both preview and produc
 | Geolocation | Browser `navigator.geolocation` | No API key required |
 | Reverse geocode | BigDataCloud (free, no key) | Converts lat/lng → readable location hint |
 | Fonts | Google Fonts — DM Sans + DM Mono | Weights loaded via preconnect |
-| Supabase client | CDN — `@supabase/supabase-js@2` (UMD) | Single script tag, no bundler |
+| Supabase client | Vendored `@supabase/supabase-js@2.115.0` (UMD) | Single script tag, no bundler. Served from the library, not a CDN — `app.js` calls `createClient()` at load time, so a blocked CDN would leave users stuck on the auth screen |
 | i18n | Inline object, no external API | Hard constraint (no translation APIs) |
 | CSS isolation | `.smx-wrap` scope | SharePoint host leaks neutralized |
 
@@ -169,7 +170,14 @@ Three languages: **English (en)**, **Hindi (hi)**, **Marathi (mr)** — no exter
 
 ## 9. CSS Architecture
 
-- All rules scoped under `.smx-wrap` (main) — prevents SharePoint host bleed
+- App rules are scoped so they cannot restyle the SharePoint host page. Rules using a
+  bare element or generic class selector (`input[type="text"]`, `section`, `.chip`,
+  `.hidden`, …) are prefixed with `:where(.smx-scope)`; `:where()` adds no specificity,
+  so the cascade inside the app is unchanged. `.smx-scope` sits on all four top-level
+  containers — `#smx-toast-ov`, `#modal-ov`, `#pg-tr` and `<main class="smx-wrap">` —
+  because the three overlays live outside `.smx-wrap`
+- The block that hides SharePoint chrome (`#globalNavBox`, `#suiteBarDelta`, …) is
+  deliberately left unscoped: it targets host elements on purpose
 - CSS variables: `--tx`, `--tx2`, `--txm`, `--card`, `--bg-sub`, `--bdr`, `--orange`, `--red`, etc.
 - Two themes: light (default) and dark — toggled via `data-theme` on `<html>`
 - Mobile-first breakpoints: `≤480px`, `≤767px`, `≤360px`
@@ -195,7 +203,7 @@ Three languages: **English (en)**, **Hindi (hi)**, **Marathi (mr)** — no exter
 
 ## 11. SharePoint Deployment
 
-1. Upload `index.html`, `styles.css`, `app.js` to `/Style Library/Geo-tagg/`
+1. Upload `index.html`, `styles.css`, `app.js` and `supabase.min.js` to `/Style Library/Geo-tagg/` — all four, or the app cannot reach the database
 2. Add a **Script Editor Web Part** (or Page Viewer) on the SP page
 3. In the web part, reference: `<script src="/Style%20Library/Geo-tagg/app.js"></script>` (or embed `index.html` via Page Viewer)
 4. Run the Supabase SQL above

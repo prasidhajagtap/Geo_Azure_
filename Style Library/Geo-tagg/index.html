@@ -16,8 +16,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Supabase JS v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Supabase JS v2 — served from this folder, not a CDN. app.js calls
+       supabase.createClient() at load time, so a blocked CDN would take the
+       whole app down. Must be uploaded alongside index.html/styles.css/app.js. -->
+  <script src="/Style%20Library/Geo-tagg/supabase.min.js"></script>
 
   <!-- SharePoint postback disabler — must be in <head> before SP scripts -->
   <script>

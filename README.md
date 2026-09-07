@@ -10,12 +10,18 @@ No build step. The three files are deployed as-is.
 ```
 Style Library/Geo-tagg/     <- copy this folder into SharePoint as-is
 ├── index.html              markup + SharePoint postback disabler
-├── styles.css              all CSS, scoped under .smx-wrap
-└── app.js                  state, i18n, Supabase client, validators, render
+├── styles.css              all CSS, scoped so it cannot leak into the SharePoint page
+├── app.js                  state, i18n, Supabase client, validators, render
+└── supabase.min.js         vendored supabase-js v2.115.0 (no CDN at runtime)
 docs/
 ├── PROJECT.md              full project documentation
 └── CONDITIONS.md           environment, security and input constraints
 ```
+
+All four files in `Style Library/Geo-tagg/` must be uploaded together.
+`supabase.min.js` is vendored rather than loaded from a CDN because `app.js`
+creates the Supabase client at load time — if that script is unavailable, the
+app cannot start.
 
 The folder name matches the SharePoint target path, so deployment is a direct
 copy into `/Style Library/Geo-tagg/`. `index.html` references the CSS and JS by
@@ -24,7 +30,7 @@ must be kept exactly as-is.
 
 ## Deploy
 
-1. Upload `Style Library/Geo-tagg/` to the same path in SharePoint.
+1. Upload `Style Library/Geo-tagg/` (all four files) to the same path in SharePoint.
 2. Add a Script Editor or Page Viewer Web Part pointing at `index.html`.
 3. Run the SQL in `docs/PROJECT.md` section 6 (RLS policy + `recent_shifts` RPC).
 
@@ -43,3 +49,14 @@ Geolocation works on `localhost` because it counts as a secure context.
 Identity comes from SharePoint hidden fields, which do not exist locally, so
 after about six seconds the app falls back to the manual name + Poornata ID
 form. That fallback is the expected local behaviour, not a failure.
+
+## Editing the CSS
+
+Rules that use a bare element or generic class selector — `input[type="text"]`,
+`section`, `.chip`, `.hidden` and the like — must be prefixed with
+`:where(.smx-scope)`. Without it they also restyle SharePoint's own markup,
+since the stylesheet is loaded into the host page. `:where()` contributes no
+specificity, so the prefix does not disturb the cascade inside the app.
+
+The one deliberate exception is the block near the top that hides SharePoint
+chrome; it targets host elements on purpose and stays unscoped.
