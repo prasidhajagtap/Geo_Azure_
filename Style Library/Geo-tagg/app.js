@@ -1586,66 +1586,6 @@ function renderSuccess() {
 function sourceTag() { return ''; }
 
 
-/**
- * renderAzureBanner — Prasidha Jagtap (v08)
- * Renders the Azure identity strip at the top of smx-main-sec.
- * Shows profile photo (or initials), name, PID, and verified badge.
- * Called on every renderMain() — safe to call multiple times.
- * Security: all writes via textContent. Photo via img.src only.
- */
-function renderAzureBanner() {
-  const banner = g('azure-banner');
-  if (!banner) return;
-
-  /* Photo or initials in az-banner (Prasidha) */
-  const img  = g('az-photo');
-  const init = g('az-initials');
-
-  if (img && U.photo) {
-    img.src = U.photo;
-    img.style.display = 'block';
-    img.onerror = function () {
-      img.style.display = 'none';
-      if (init) {
-        const parts    = (U.name || 'E').trim().split(' ');
-        init.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
-        init.style.display = 'flex';
-      }
-    };
-    if (init) init.style.display = 'none';
-  } else if (init) {
-    const parts    = (U.name || 'E').trim().split(' ');
-    init.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
-    init.style.display = 'flex';
-    if (img) img.style.display = 'none';
-  }
-
-  /* Populate main-hdr avatar slot */
-  const mhlPhoto    = g('smx-mhl-photo');
-  const mhlInitials = g('smx-mhl-initials');
-  if (mhlPhoto && mhlInitials) {
-    const nameParts = (U.name || 'E').trim().split(' ');
-    const initials  = (nameParts[0][0] + (nameParts[1] ? nameParts[1][0] : '')).toUpperCase();
-    if (U.photo) {
-      mhlPhoto.src = U.photo;
-      mhlPhoto.style.display = 'block';
-      mhlInitials.style.display = 'none';
-      mhlPhoto.onerror = function() {
-        mhlPhoto.style.display = 'none';
-        mhlInitials.textContent = initials;
-        mhlInitials.style.display = 'flex';
-      };
-    } else {
-      mhlPhoto.style.display = 'none';
-      mhlInitials.textContent = initials;
-      mhlInitials.style.display = 'flex';
-    }
-  }
-
-  setTx('az-name', U.name || '—');
-  setTx('az-pid',  U.id   || '—');
-  banner.style.display = 'flex';
-}
 
 /* ══════════════════════════════════════════════════════════════
    CAPTURE WINDOW FLOW — v11
@@ -1956,32 +1896,6 @@ g('modal-ov').addEventListener('click', e => { e.preventDefault();
    Final sanitize() pass before DB write (defence-in-depth).
    SECURITY: raw Supabase error never shown to user.
 */
-/* tap-and-hold (submit-hold) calls doSubmit() directly.
-   Guarded so legacy load-time binding doesn't null-crash. */
-if (g('btn-submit')) g('btn-submit').addEventListener('click', async (e) => { e.preventDefault();
-  if (isSubmitting) return;
-
-  /* at least one punch required; missing punch is sent blank */
-  if (!U.clockIn && !U.clockOut) {
-    toast(t('recordFirst'), 'err');
-    return;
-  }
-
-  /* Confirm when one side is missing — the blank cannot be added later */
-  if (!U.clockIn || !U.clockOut) {
-    const missing = U.clockIn ? t('punchOut') : t('punchIn');
-    showModal({
-      icon: '⚠️', title: t('missTitle'),
-      body: t('missBody').replace('{x}', missing),
-      buttons: [
-        { label: t('incompleteBtn'), cls: 'btn-grn',  fn: () => doSubmit() },
-        { label: t('goBack'),        cls: 'btn-edit', fn: null }
-      ]
-    });
-    return;
-  }
-  doSubmit();
-});
 
 /** doSubmit — writes the current day's record to the DB */
 async function doSubmit(_confirmed) {
@@ -2005,8 +1919,6 @@ async function doSubmit(_confirmed) {
   }
   isSubmitting = true;
 
-  const btn = g('btn-submit');
-  if (btn) { btn.disabled = true; btn.textContent = t('submitting'); }
   setTx('smx-ghost-note', t('ghostNote'));
   show('smx-ghost-scr');
 
@@ -2026,7 +1938,6 @@ async function doSubmit(_confirmed) {
         : t('submitFailedOther');
       toast(msg, 'err');
       isSubmitting = false;
-      if (btn) { btn.disabled = false; btn.textContent = t('btnSubmitDone'); }
       v12ResetSubmitHold();
     }
   } catch (e) {
@@ -2034,7 +1945,6 @@ async function doSubmit(_confirmed) {
     console.error('[GeoAtt] Network error:', e);
     toast(t('submitFailedNet'), 'err');
     isSubmitting = false;
-    if (btn) { btn.disabled = false; btn.textContent = t('btnSubmitDone'); }
     v12ResetSubmitHold();
   }
 }
